@@ -20,7 +20,11 @@ type Feature struct {
 }
 
 // A FeatureCollection is a feature collection.
-type FeatureCollection []*Feature
+
+type FeatureCollection struct {
+	Features   []*Feature
+	Properties map[string]interface{}
+}
 
 type feature struct {
 	ID         interface{}            `json:"id,omitempty"`
@@ -30,8 +34,9 @@ type feature struct {
 }
 
 type featureCollection struct {
-	Type     string    `json:"type"`
-	Features []feature `json:"features"`
+	Type       string    `json:"type"`
+	Features   []feature `json:"features"`
+	Properties map[string]interface{}
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -61,8 +66,8 @@ func (f *Feature) UnmarshalJSON(data []byte) error {
 
 // MarshalJSON implements json.Marshaler.
 func (fc FeatureCollection) MarshalJSON() ([]byte, error) {
-	features := make([]feature, 0, len(fc))
-	for _, f := range fc {
+	features := make([]feature, 0, len(fc.Features))
+	for _, f := range fc.Features {
 		feature := feature{
 			ID:         f.ID,
 			Type:       featureType,
@@ -72,8 +77,9 @@ func (fc FeatureCollection) MarshalJSON() ([]byte, error) {
 		features = append(features, feature)
 	}
 	return json.Marshal(featureCollection{
-		Type:     featureCollectionType,
-		Features: features,
+		Type:       featureCollectionType,
+		Properties: fc.Properties,
+		Features:   features,
 	})
 }
 
@@ -98,6 +104,7 @@ func (fc *FeatureCollection) UnmarshalJSON(data []byte) error {
 		}
 		featureCollection = append(featureCollection, f)
 	}
-	*fc = featureCollection
+	fc.Features = featureCollection
+	fc.Properties = geoJSONFeatureCollection.Properties
 	return nil
 }
