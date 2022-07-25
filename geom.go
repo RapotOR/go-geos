@@ -598,6 +598,21 @@ func (g *Geom) UnaryUnion() *Geom {
 	return g.context.newNonNilGeom(C.GEOSUnaryUnion_r(g.context.handle, g.geom), g)
 }
 
+// Union returns the union of two geometries.
+func (g *Geom) Union(g2 *Geom) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSUnion_r(g.context.handle, g.geom, g2.geom), nil)
+}
+
+func (g *Geom) Simplify(tolerance float64) *Geom {
+	g.mustNotBeDestroyed()
+	g.context.Lock()
+	defer g.context.Unlock()
+	return g.context.newNonNilGeom(C.GEOSSimplify_r(g.context.handle, g.geom, C.double(tolerance)), g)
+}
+
 // Within returns if g is within other.
 func (g *Geom) Within(other *Geom) bool {
 	g.mustNotBeDestroyed()
