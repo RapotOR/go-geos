@@ -34,9 +34,9 @@ type feature struct {
 }
 
 type featureCollection struct {
-	Type       string    `json:"type"`
-	Features   []feature `json:"features"`
-	Properties map[string]interface{}
+	Type       string                 `json:"type"`
+	Features   []feature              `json:"features"`
+	Properties map[string]interface{} `json:"properties,omitempty"`
 }
 
 // MarshalJSON implements json.Marshaler.
