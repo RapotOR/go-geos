@@ -113,6 +113,17 @@ func (g *Geometry) UnmarshalJSON(data []byte) error {
 		}
 		g.Geom = geos.NewCollection(geos.MultiPolygonTypeID, geoms)
 		return nil
+	case "GeometryCollection":
+		geoms := make([]*geos.Geom, len(geoJSON.Geometries))
+		for i, geometry := range geoJSON.Geometries {
+			geom, err := NewGeometryFromGeoJSON(geometry)
+			if err != nil {
+				return err
+			}
+			geoms[i] = geom.Geom
+		}
+		g.Geom = geos.NewCollection(geos.GeometryCollectionTypeID, geoms)
+		return nil
 	case "MultiGeometry":
 		fallthrough // FIXME
 	default:

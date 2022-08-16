@@ -25,6 +25,10 @@ func TestGeoJSON(t *testing.T) {
 			geom:       NewGeometry(geos.NewPoint([]float64{1, 2})),
 			geoJSONStr: `{"type":"Point","coordinates":[1,2]}`,
 		},
+		{
+			geom:       NewGeometry(geos.NewCollection(geos.GeometryCollectionTypeID, []*geos.Geom{geos.NewPoint([]float64{1, 2}), geos.NewPoint([]float64{3, 4}), geos.NewPoint([]float64{5, 6})})),
+			geoJSONStr: `{"type":"GeometryCollection","geometries":[{"type":"Point","coordinates":[1,2]},{"type":"Point","coordinates":[3,4]},{"type":"Point","coordinates":[5,6]}]}`,
+		},
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			actualGeoJSON, err := tc.geom.MarshalJSON()
