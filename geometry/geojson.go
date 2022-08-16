@@ -257,6 +257,11 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 			return err
 		}
 		for i, n := 0, geom.NumGeometries(); i < n; i++ {
+			if i != 0 {
+				if err := sb.WriteByte(','); err != nil {
+					return err
+				}
+			}
 			if err := geojsonWriteGeom(sb, geom.Geometry(i)); err != nil {
 				return err
 			}
