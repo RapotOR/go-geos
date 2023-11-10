@@ -1,8 +1,8 @@
 // Package geos provides an interface to GEOS. See https://trac.osgeo.org/geos/.
 package geos
 
-// #cgo LDFLAGS: -lgeos_c
-// #include "geos.h"
+// #cgo pkg-config: geos
+// #include "go-geos.h"
 import "C"
 
 // Version.
@@ -12,19 +12,49 @@ const (
 	VersionPatch = C.GEOS_VERSION_PATCH
 )
 
-// A GeometryTypeID is a geometry type id.
-type GeometryTypeID int
+// A TypeID is a geometry type id.
+type TypeID int
 
 // Geometry type ids.
 const (
-	PointTypeID              GeometryTypeID = C.GEOS_POINT
-	LineStringTypeID         GeometryTypeID = C.GEOS_LINESTRING
-	LinearRingTypeID         GeometryTypeID = C.GEOS_LINEARRING
-	PolygonTypeID            GeometryTypeID = C.GEOS_POLYGON
-	MultiPointTypeID         GeometryTypeID = C.GEOS_MULTIPOINT
-	MultiLineStringTypeID    GeometryTypeID = C.GEOS_MULTILINESTRING
-	MultiPolygonTypeID       GeometryTypeID = C.GEOS_MULTIPOLYGON
-	GeometryCollectionTypeID GeometryTypeID = C.GEOS_GEOMETRYCOLLECTION
+	TypeIDPoint              TypeID = C.GEOS_POINT
+	TypeIDLineString         TypeID = C.GEOS_LINESTRING
+	TypeIDLinearRing         TypeID = C.GEOS_LINEARRING
+	TypeIDPolygon            TypeID = C.GEOS_POLYGON
+	TypeIDMultiPoint         TypeID = C.GEOS_MULTIPOINT
+	TypeIDMultiLineString    TypeID = C.GEOS_MULTILINESTRING
+	TypeIDMultiPolygon       TypeID = C.GEOS_MULTIPOLYGON
+	TypeIDGeometryCollection TypeID = C.GEOS_GEOMETRYCOLLECTION
+)
+
+// A BoundaryNodeRule is a boundary node rule.
+type RelateBoundaryNodeRule int
+
+// Boundary node rules.
+const (
+	RelateBoundaryNodeRuleMod2                RelateBoundaryNodeRule = C.GEOSRELATE_BNR_MOD2
+	RelateBoundaryNodeRuleOGC                 RelateBoundaryNodeRule = C.GEOSRELATE_BNR_OGC
+	RelateBoundaryNodeRuleEndpoint            RelateBoundaryNodeRule = C.GEOSRELATE_BNR_ENDPOINT
+	RelateBoundaryNodeRuleMultivalentEndpoint RelateBoundaryNodeRule = C.GEOSRELATE_BNR_MULTIVALENT_ENDPOINT
+	RelateBoundaryNodeRuleMonovalentEndpoint  RelateBoundaryNodeRule = C.GEOSRELATE_BNR_MONOVALENT_ENDPOINT
+)
+
+type BufCapStyle int
+
+// Buffer cap styles.
+const (
+	BufCapStyleRound  BufCapStyle = C.GEOSBUF_CAP_ROUND
+	BufCapStyleFlat   BufCapStyle = C.GEOSBUF_CAP_FLAT
+	BufCapStyleSquare BufCapStyle = C.GEOSBUF_CAP_SQUARE
+)
+
+type BufJoinStyle int
+
+// Buffer join styles.
+const (
+	BufJoinStyleRound BufJoinStyle = C.GEOSBUF_JOIN_ROUND
+	BufJoinStyleMitre BufJoinStyle = C.GEOSBUF_JOIN_MITRE
+	BufJoinStyleBevel BufJoinStyle = C.GEOSBUF_JOIN_BEVEL
 )
 
 // An Error is an error returned by GEOS.
@@ -35,33 +65,35 @@ func (e Error) Error() string {
 }
 
 var (
+	errContextMismatch     = Error("context mismatch")
 	errDimensionOutOfRange = Error("dimension out of range")
+	errDuplicateValue      = Error("duplicate value")
 	errIndexOutOfRange     = Error("index out of range")
-	errVersionTooLow       = Error("version too low")
 )
 
-// requireVersionOrPanic panics if the GEOS version is not at least
-// major.minor.patch.
-func requireVersion(major, minor, patch int) {
-	if !versionEqualOrGreaterThan(major, minor, patch) {
-		panic(errVersionTooLow)
-	}
-}
+type PrecisionRule int
 
-// versionEqualOrGreaterThan returns true if the GEOS version is at least
-// major.minor.patch.
-func versionEqualOrGreaterThan(major, minor, patch int) bool {
-	switch {
-	case VersionMajor > major:
-		return true
-	case VersionMajor < major:
-		return false
-	}
-	switch {
-	case VersionMinor > minor:
-		return true
-	case VersionMinor < minor:
-		return false
-	}
-	return VersionPatch >= patch
-}
+// Precision rules.
+const (
+	PrecisionRuleNone          PrecisionRule = 0
+	PrecisionRuleValidOutput   PrecisionRule = C.GEOS_PREC_VALID_OUTPUT
+	PrecisionRuleNoTopo        PrecisionRule = C.GEOS_PREC_NO_TOPO
+	PrecisionRulePointwise     PrecisionRule = C.GEOS_PREC_NO_TOPO
+	PrecisionRuleKeepCollapsed PrecisionRule = C.GEOS_PREC_KEEP_COLLAPSED
+)
+
+type MakeValidMethod int
+
+// MakeValidMethods.
+const (
+	MakeValidLinework  MakeValidMethod = C.GEOS_MAKE_VALID_LINEWORK
+	MakeValidStructure MakeValidMethod = C.GEOS_MAKE_VALID_STRUCTURE
+)
+
+type MakeValidCollapsed int
+
+// MakeValidMethods.
+const (
+	MakeValidDiscardCollapsed MakeValidCollapsed = 0
+	MakeValidKeepCollapsed    MakeValidCollapsed = 1
+)

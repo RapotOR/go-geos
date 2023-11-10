@@ -1,12 +1,11 @@
-package geometry
+package geometry_test
 
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 
-	geos "github.com/twpayne/go-geos"
+	"github.com/twpayne/go-geos"
 )
 
 func TestBounds(t *testing.T) {
@@ -58,7 +57,7 @@ func TestBounds(t *testing.T) {
 			assert.True(t, tc.bounds.Equals(tc.bounds))
 			assert.Equal(t, tc.expectedEmpty, tc.bounds.IsEmpty())
 			expectedGeom, err := geos.NewGeomFromWKT(tc.expectedGeomWKT)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.True(t, expectedGeom.Equals(tc.bounds.Geom()))
 		})
 	}

@@ -1,4 +1,4 @@
-#include "geos.h"
+#include "go-geos.h"
 
 // Using cgo to call C functions from Go has a high overhead. The functions in
 // this file batch multiple calls to GEOS in C (rather than Go) to increase
@@ -6,22 +6,15 @@
 
 enum { bounds_MinX, bounds_MinY, bounds_MaxX, bounds_MaxY };
 
-// c_GEOSCoordSeq_getFlatCoords_r writes s's coordinate data to flatCoords,
-// which must contain size*dims elements. It returns 0 on any exception, 1
-// otherwise.
-int c_GEOSCoordSeq_getFlatCoords_r(GEOSContextHandle_t handle,
-                                   const GEOSCoordSequence *s,
-                                   unsigned int size, unsigned int dims,
-                                   double *flatCoords) {
-  double *val = flatCoords;
-  for (unsigned int idx = 0; idx < size; ++idx) {
-    for (unsigned int dim = 0; dim < dims; ++dim) {
-      if (GEOSCoordSeq_getOrdinate_r(handle, s, idx, dim, val++) == 0) {
-        return 0;
-      }
-    }
-  }
-  return 1;
+uintptr_t c_GEOSGeom_getUserData_r(GEOSContextHandle_t handle,
+                                   const GEOSGeometry *g) {
+  void *userdata = GEOSGeom_getUserData_r(handle, g);
+  return (uintptr_t)userdata;
+}
+
+void c_GEOSGeom_setUserData_r(GEOSContextHandle_t handle, GEOSGeometry *g,
+                              uintptr_t userdata) {
+  GEOSGeom_setUserData_r(handle, g, (void *)userdata);
 }
 
 // c_GEOSGeomBounds_r extends bounds to include g.
@@ -136,28 +129,6 @@ void c_errorMessageHandler(const char *message, void *userdata) {
   go_errorMessageHandler(message, userdata);
 }
 
-// c_newGEOSCoordSeqFromFlatCoords returns a new GEOSCoordSequence populated
-// with flatCoords. It returns NULL on any exception.
-GEOSCoordSequence *c_newGEOSCoordSeqFromFlatCoords_r(GEOSContextHandle_t handle,
-                                                     unsigned int size,
-                                                     unsigned int dims,
-                                                     const double *flatCoords) {
-  GEOSCoordSequence *s = GEOSCoordSeq_create_r(handle, size, dims);
-  if (s == NULL) {
-    return NULL;
-  }
-  const double *val = flatCoords;
-  for (unsigned int idx = 0; idx < size; ++idx) {
-    for (unsigned int dim = 0; dim < dims; ++dim) {
-      if (GEOSCoordSeq_setOrdinate_r(handle, s, idx, dim, *val++) == 0) {
-        GEOSCoordSeq_destroy_r(handle, s);
-        return NULL;
-      }
-    }
-  }
-  return s;
-}
-
 // c_newGEOSGeomFromBounds_r returns a new GEOSGeom representing bounds. It
 // returns NULL on any exception.
 GEOSGeometry *c_newGEOSGeomFromBounds_r(GEOSContextHandle_t handle, int *typeID,
@@ -185,19 +156,12 @@ GEOSGeometry *c_newGEOSGeomFromBounds_r(GEOSContextHandle_t handle, int *typeID,
     *typeID = GEOS_POINT;
     return g;
   }
-  GEOSCoordSequence *s = GEOSCoordSeq_create_r(handle, 5, 2);
-  if (s == NULL) {
-    return NULL;
-  }
   const double flatCoords[10] = {minX, minY, maxX, minY, maxX,
                                  maxY, minX, maxY, minX, minY};
-  const double *val = flatCoords;
-  for (unsigned idx = 0; idx < 5; idx++) {
-    if (GEOSCoordSeq_setX_r(handle, s, idx, *val++) == 0 ||
-        GEOSCoordSeq_setY_r(handle, s, idx, *val++) == 0) {
-      GEOSCoordSeq_destroy_r(handle, s);
-      return NULL;
-    }
+  GEOSCoordSequence *s =
+      GEOSCoordSeq_copyFromBuffer_r(handle, flatCoords, 5, 0, 0);
+  if (s == NULL) {
+    return NULL;
   }
   GEOSGeometry *shell = GEOSGeom_createLinearRing_r(handle, s);
   if (shell == NULL) {
@@ -213,37 +177,53 @@ GEOSGeometry *c_newGEOSGeomFromBounds_r(GEOSContextHandle_t handle, int *typeID,
   return polygon;
 }
 
+void c_GEOSSTRtree_query_callback(void *elem, void *userdata) {
+  void go_GEOSSTRtree_query_callback(void *, void *);
+  go_GEOSSTRtree_query_callback(elem, userdata);
+}
+
+int c_GEOSSTRtree_distance_callback(const void *item1, const void *item2,
+                                    double *distance, void *userdata) {
+  int go_GEOSSTRtree_distance_callback(const void *, const void *, double *,
+                                       void *);
+  return go_GEOSSTRtree_distance_callback(item1, item2, distance, userdata);
+}
+
+GEOSGeometry *c_GEOSMakeValidWithParams_r(GEOSContextHandle_t handle,
+                                          const GEOSGeometry *g,
+                                          enum GEOSMakeValidMethods method,
+                                          int keepCollapsed) {
+  GEOSGeometry *res;
+  GEOSMakeValidParams *par;
+
+  par = GEOSMakeValidParams_create_r(handle);
+  GEOSMakeValidParams_setKeepCollapsed_r(handle, par, keepCollapsed);
+  GEOSMakeValidParams_setMethod_r(handle, par, method);
+
+  res = GEOSMakeValidWithParams_r(handle, g, par);
+
+  GEOSMakeValidParams_destroy_r(handle, par);
+
+  return res;
+}
+
 #if GEOS_VERSION_MAJOR < 3 ||                                                  \
-    (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 10)
+    (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 11)
 
-GEOSGeometry *GEOSDensify_r(GEOSContextHandle_t handle, const GEOSGeometry *g,
-                            double tolerance) {
+GEOSGeometry *GEOSConcaveHull_r(GEOSContextHandle_t handle,
+                                const GEOSGeometry *g, double ratio,
+                                unsigned int allowHoles) {
   return NULL;
 }
 
-GEOSGeoJSONReader *GEOSGeoJSONReader_create_r(GEOSContextHandle_t handle) {
-  return NULL;
-}
+#endif
 
-void GEOSGeoJSONReader_destroy_r(GEOSContextHandle_t handle,
-                                 GEOSGeoJSONReader *reader) {}
+#if GEOS_VERSION_MAJOR < 3 ||                                                  \
+    (GEOS_VERSION_MAJOR == 3 && GEOS_VERSION_MINOR < 12)
 
-GEOSGeometry *GEOSGeoJSONReader_readGeometry_r(GEOSContextHandle_t handle,
-                                               GEOSGeoJSONReader *reader,
-                                               const char *geojson) {
-  return NULL;
-}
-
-GEOSGeoJSONWriter *GEOSGeoJSONWriter_create_r(GEOSContextHandle_t handle) {
-  return NULL;
-}
-
-void GEOSGeoJSONWriter_destroy_r(GEOSContextHandle_t handle,
-                                 GEOSGeoJSONWriter *reader) {}
-
-char *GEOSGeoJSONWriter_writeGeometry_r(GEOSContextHandle_t handle,
-                                        GEOSGeoJSONWriter *writer,
-                                        const GEOSGeometry *g, int indent) {
+GEOSGeometry *GEOSConcaveHullByLength_r(GEOSContextHandle_t handle,
+                                        const GEOSGeometry *g, double ratio,
+                                        unsigned int allowHoles) {
   return NULL;
 }
 

@@ -1,23 +1,23 @@
-package geojson
+package geojson_test
 
 import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
 
 	"github.com/twpayne/go-geos"
+	"github.com/twpayne/go-geos/geojson"
 	"github.com/twpayne/go-geos/geometry"
 )
 
 func TestGeoJSON(t *testing.T) {
 	for i, tc := range []struct {
-		feat       *Feature
+		feat       *geojson.Feature
 		geoJSONStr string
 	}{
 		{
-			feat: &Feature{
+			feat: &geojson.Feature{
 				ID:       "testID",
 				Geometry: *geometry.NewGeometry(geos.NewPoint([]float64{1, 2})),
 				Properties: map[string]interface{}{
@@ -29,11 +29,11 @@ func TestGeoJSON(t *testing.T) {
 	} {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			actualGeoJSON, err := tc.feat.MarshalJSON()
-			require.NoError(t, err)
+			assert.NoError(t, err)
 			assert.Equal(t, tc.geoJSONStr, string(actualGeoJSON))
 
-			var feat Feature
-			require.NoError(t, feat.UnmarshalJSON([]byte(tc.geoJSONStr)))
+			var feat geojson.Feature
+			assert.NoError(t, feat.UnmarshalJSON([]byte(tc.geoJSONStr)))
 			assert.True(t, tc.feat.Geometry.Equals(feat.Geometry.Geom))
 		})
 	}

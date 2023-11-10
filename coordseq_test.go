@@ -1,4 +1,4 @@
-package geos
+package geos_test
 
 import (
 	"fmt"
@@ -6,22 +6,60 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/alecthomas/assert/v2"
+
+	"github.com/twpayne/go-geos"
 )
 
 func TestCoordSeqEmpty(t *testing.T) {
 	defer runtime.GC() // Exercise finalizers.
-	c := NewContext()
+	c := geos.NewContext()
 	s := c.NewCoordSeq(0, 2)
 	assert.Equal(t, 0, s.Size())
 	assert.Equal(t, 2, s.Dimensions())
-	assert.Nil(t, s.ToCoords())
+	assert.Equal(t, nil, s.ToCoords())
+}
+
+func TestCoordSeqIsCCW(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		coords      [][]float64
+		expected    bool
+		expectedErr bool
+	}{
+		{
+			name:     "ccw",
+			coords:   [][]float64{{0, 0}, {1, 0}, {1, 1}, {0, 0}},
+			expected: true,
+		},
+		{
+			name:     "cw",
+			coords:   [][]float64{{0, 0}, {0, 1}, {1, 1}, {0, 0}},
+			expected: false,
+		},
+		{
+			name:        "short",
+			coords:      [][]float64{{0, 0}, {1, 0}, {1, 1}},
+			expectedErr: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			defer runtime.GC() // Exercise finalizers.
+			s := geos.NewContext().NewCoordSeqFromCoords(tc.coords)
+			if tc.expectedErr {
+				assert.Panics(t, func() {
+					s.IsCCW()
+				})
+			} else {
+				assert.Equal(t, tc.expected, s.IsCCW())
+			}
+		})
+	}
 }
 
 func TestCoordSeqMethods(t *testing.T) {
 	defer runtime.GC() // Exercise finalizers.
-	c := NewContext()
+	c := geos.NewContext()
 	s := c.NewCoordSeq(2, 3)
 	assert.Equal(t, 2, s.Size())
 	assert.Equal(t, 3, s.Dimensions())
@@ -49,14 +87,14 @@ func TestCoordSeqMethods(t *testing.T) {
 	assert.Equal(t, -2.0, clone.Y(0))
 	assert.Equal(t, [][]float64{{-1, -2, 0}, {1, 2, 3}}, clone.ToCoords())
 
-	require.Equal(t, 3, clone.Dimensions())
+	assert.Equal(t, 3, clone.Dimensions())
 	assert.Equal(t, 3.0, clone.Z(1))
 	clone.SetOrdinate(0, 2, -3.0)
 	assert.Equal(t, -3.0, clone.Z(0))
 }
 
 func TestCoordSeqPanics(t *testing.T) {
-	c := NewContext()
+	c := geos.NewContext()
 	s := c.NewCoordSeq(1, 2)
 
 	assert.Panics(t, func() { s.X(-1) })
@@ -122,7 +160,7 @@ func TestCoordSeqCoordsMethods(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			defer runtime.GC() // Exercise finalizers.
-			c := NewContext()
+			c := geos.NewContext()
 			s := c.NewCoordSeqFromCoords(tc.coords)
 			assert.Equal(t, tc.coords, s.ToCoords())
 		})

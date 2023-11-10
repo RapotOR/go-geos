@@ -7,18 +7,18 @@ import (
 	"strconv"
 	"strings"
 
-	geos "github.com/twpayne/go-geos"
+	"github.com/twpayne/go-geos"
 )
 
 var (
-	geojsonType = map[geos.GeometryTypeID]string{
-		geos.PointTypeID:              "Point",
-		geos.LineStringTypeID:         "LineString",
-		geos.PolygonTypeID:            "Polygon",
-		geos.MultiPointTypeID:         "MultiPoint",
-		geos.MultiLineStringTypeID:    "MultiLineString",
-		geos.MultiPolygonTypeID:       "MultiPolygon",
-		geos.GeometryCollectionTypeID: "GeometryCollection",
+	geojsonType = map[geos.TypeID]string{
+		geos.TypeIDPoint:              "Point",
+		geos.TypeIDLineString:         "LineString",
+		geos.TypeIDPolygon:            "Polygon",
+		geos.TypeIDMultiPoint:         "MultiPoint",
+		geos.TypeIDMultiLineString:    "MultiLineString",
+		geos.TypeIDMultiPolygon:       "MultiPolygon",
+		geos.TypeIDGeometryCollection: "GeometryCollection",
 	}
 
 	errUnsupportedEmptyGeometry = errors.New("unsupported empty geometry")
@@ -89,7 +89,7 @@ func (g *Geometry) UnmarshalJSON(data []byte) error {
 		for i, pointCoord := range coordinates {
 			geoms[i] = geos.NewPoint(pointCoord)
 		}
-		g.Geom = geos.NewCollection(geos.MultiPointTypeID, geoms)
+		g.Geom = geos.NewCollection(geos.TypeIDMultiPoint, geoms)
 		return nil
 	case "MultiLineString":
 		var coordinates [][][]float64
@@ -100,7 +100,7 @@ func (g *Geometry) UnmarshalJSON(data []byte) error {
 		for i, lineStringCoords := range coordinates {
 			geoms[i] = geos.NewLineString(lineStringCoords)
 		}
-		g.Geom = geos.NewCollection(geos.MultiLineStringTypeID, geoms)
+		g.Geom = geos.NewCollection(geos.TypeIDMultiLineString, geoms)
 		return nil
 	case "MultiPolygon":
 		var coordinates [][][][]float64
@@ -111,7 +111,7 @@ func (g *Geometry) UnmarshalJSON(data []byte) error {
 		for i, polygonCoords := range coordinates {
 			geoms[i] = geos.NewPolygon(polygonCoords)
 		}
-		g.Geom = geos.NewCollection(geos.MultiPolygonTypeID, geoms)
+		g.Geom = geos.NewCollection(geos.TypeIDMultiPolygon, geoms)
 		return nil
 	case "GeometryCollection":
 		geoms := make([]*geos.Geom, len(geoJSON.Geometries))
@@ -122,7 +122,7 @@ func (g *Geometry) UnmarshalJSON(data []byte) error {
 			}
 			geoms[i] = geom.Geom
 		}
-		g.Geom = geos.NewCollection(geos.GeometryCollectionTypeID, geoms)
+		g.Geom = geos.NewCollection(geos.TypeIDGeometryCollection, geoms)
 		return nil
 	case "MultiGeometry":
 		fallthrough // FIXME
@@ -182,7 +182,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 	}
 	//nolint:exhaustive
 	switch geom.TypeID() {
-	case geos.PointTypeID:
+	case geos.TypeIDPoint:
 		if geom.IsEmpty() {
 			return errUnsupportedEmptyGeometry
 		}
@@ -192,7 +192,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 		if err := geojsonWriteCoordinates(sb, geom); err != nil {
 			return err
 		}
-	case geos.LineStringTypeID:
+	case geos.TypeIDLineString:
 		if geom.IsEmpty() {
 			return errUnsupportedEmptyGeometry
 		}
@@ -202,7 +202,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 		if err := geojsonWriteCoordinatesArray(sb, geom); err != nil {
 			return err
 		}
-	case geos.PolygonTypeID:
+	case geos.TypeIDPolygon:
 		if geom.IsEmpty() {
 			return errUnsupportedEmptyGeometry
 		}
@@ -212,7 +212,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 		if err := geojsonWritePolygonCoordinates(sb, geom); err != nil {
 			return err
 		}
-	case geos.MultiPointTypeID:
+	case geos.TypeIDMultiPoint:
 		if _, err := sb.WriteString(`,"coordinates":[`); err != nil {
 			return err
 		}
@@ -229,7 +229,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 		if err := sb.WriteByte(']'); err != nil {
 			return err
 		}
-	case geos.MultiLineStringTypeID:
+	case geos.TypeIDMultiLineString:
 		if _, err := sb.WriteString(`,"coordinates":[`); err != nil {
 			return err
 		}
@@ -246,7 +246,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 		if err := sb.WriteByte(']'); err != nil {
 			return err
 		}
-	case geos.MultiPolygonTypeID:
+	case geos.TypeIDMultiPolygon:
 		if _, err := sb.WriteString(`,"coordinates":[`); err != nil {
 			return err
 		}
@@ -263,7 +263,7 @@ func geojsonWriteGeom(sb *strings.Builder, geom *geos.Geom) error {
 		if err := sb.WriteByte(']'); err != nil {
 			return err
 		}
-	case geos.GeometryCollectionTypeID:
+	case geos.TypeIDGeometryCollection:
 		if _, err := sb.WriteString(`,"geometries":[`); err != nil {
 			return err
 		}
